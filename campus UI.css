@@ -71,9 +71,12 @@ svg#map{width:100%;display:block;}
 .mp{stroke:#b9a77c;stroke-width:2;stroke-dasharray:4 4;} .mp.route{stroke:var(--ochre-d);stroke-width:4;stroke-dasharray:none;}
 .mn circle{fill:#1E4C52;stroke:#EFE8D8;stroke-width:2;cursor:pointer;} .mn:hover circle{fill:var(--ochre);} .mn.cur circle{fill:var(--ochre);}
 .mn text{font:600 8px Inter,sans-serif;fill:#152A33;pointer-events:none;}
+.mn:focus-visible{outline:none;}
+.mn:focus-visible circle{stroke:var(--ochre);stroke-width:4;}
 .pulse{fill:none;stroke:var(--ochre);stroke-width:2;animation:pl 1.6s infinite;} @keyframes pl{from{r:9;opacity:.9}to{r:19;opacity:0}}
 /* hotspots */
-.hs{position:absolute;transform:translate(-50%,-50%);z-index:10;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));}
+.hs{position:absolute;transform:translate(-50%,-50%);z-index:10;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));border:0;padding:0;background:none;color:inherit;font:inherit;}
+.hs:focus-visible{outline:3px solid #fff;outline-offset:4px;}
 .hs .a{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--ochre),var(--ochre-d));border:2px solid #fff;display:grid;place-items:center;color:#fff;font-size:20px;transition:transform .15s;}
 .hs:hover .a{transform:scale(1.12);} .hs.next .a{background:var(--teal);animation:bp 1.2s infinite;}
 @keyframes bp{50%{box-shadow:0 0 0 10px rgba(30,76,82,.35)}}

@@ -61,8 +61,14 @@ function placeholder(n){
 }
 const loader=new THREE.TextureLoader();
 function getTex(n){
-  if(texCache[n.id])return Promise.resolve(texCache[n.id]);
-  return new Promise(res=>loader.load(n.pano||placeholder(n),t=>{t.encoding=THREE.sRGBEncoding;texCache[n.id]=t;res(t);}));
+  if(texCache[n.id])return texCache[n.id];
+  texCache[n.id]=new Promise((resolve,reject)=>loader.load(
+    n.pano||placeholder(n),
+    t=>{t.encoding=THREE.sRGBEncoding;resolve(t);},
+    undefined,
+    ()=>{delete texCache[n.id];reject(new Error(`Unable to load panorama for ${n.name}.`));}
+  ));
+  return texCache[n.id];
 }
 const bearing=(a,b)=>(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
 const lonFor=(a,b)=>(450-bearing(a,b)+(a.yaw||0)+360)%360;
@@ -98,8 +104,9 @@ function buildHotspots(){
   const nextId=routeIdx>=0?routeIds[routeIdx+1]:null;
   byId[cur].links.forEach(id=>{
     const t=byId[id]; if(!t)return;
-    const el=document.createElement('div'); el.className='hs'+(id===nextId?' next':'');
-    el.innerHTML=`<div class="a">➜</div><div class="t">${t.name}</div>`;
+    const el=document.createElement('button'); el.type='button'; el.className='hs'+(id===nextId?' next':'');
+    el.setAttribute('aria-label',`Move to ${t.name}`);
+    el.innerHTML=`<span class="a" aria-hidden="true">➜</span><span class="t">${t.name}</span>`;
     el.onclick=()=>{ if(id===nextId)routeIdx++; else if(routeIdx>=0&&routeIds[routeIdx-1]===id)routeIdx--; goTo(id); };
     $('hotspots').appendChild(el); hs.push({el,l:lonFor(byId[cur],t)});
   });
@@ -117,14 +124,20 @@ function placeHotspots(){
 async function goTo(id,faceTo){
   const n=byId[id]; if(!n)return;
   $('fade').classList.add('on'); await new Promise(r=>setTimeout(r,240));
-  const t=await getTex(n); sphere.material.map=t; sphere.material.color.set(0xffffff); sphere.material.needsUpdate=true;
-  const from=byId[cur]; prev=(id!==cur)?from:prev; cur=id;
-  const nextId=faceTo||(routeIdx>=0?routeIds[routeIdx+1]:null);
-  if(nextId&&byId[nextId])tLon=lon=lonFor(n,byId[nextId]);
-  else if(prev&&prev!==n)tLon=lon=(lonFor(prev,n)+0)%360;
-  tLat=lat=0; vel=0;
-  buildHotspots(); drawMap(); updateInfo(); markPlace(); markStep();
-  $('fade').classList.remove('on');
+  try{
+    const t=await getTex(n); sphere.material.map=t; sphere.material.color.set(0xffffff); sphere.material.needsUpdate=true;
+    const from=byId[cur]; prev=(id!==cur)?from:prev; cur=id;
+    const nextId=faceTo||(routeIdx>=0?routeIds[routeIdx+1]:null);
+    if(nextId&&byId[nextId])tLon=lon=lonFor(n,byId[nextId]);
+    else if(prev&&prev!==n)tLon=lon=(lonFor(prev,n)+0)%360;
+    tLat=lat=0; vel=0;
+    buildHotspots(); drawMap(); updateInfo(); markPlace(); markStep();
+  }catch(error){
+    console.error(error);
+    toast(`Unable to load the panorama for ${n.name}. Check the image URL and try again.`);
+  }finally{
+    $('fade').classList.remove('on');
+  }
 }
 function updateInfo(){ const n=byId[cur]; $('iName').textContent=n.name; $('iDesc').textContent=n.desc||''; }
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('on'),2600); }
@@ -142,15 +155,20 @@ function drawMap(){
   nodes.forEach(n=>{
     const c=n.id===cur;
     if(c)h+=`<circle class="pulse" cx="${n.x}" cy="${n.y}" r="9"/>`;
-    h+=`<g class="mn${c?' cur':''}" data-id="${n.id}"><circle cx="${n.x}" cy="${n.y}" r="${c?9:6}"/><text x="${n.x}" y="${n.y-12}" text-anchor="middle">${n.name}</text></g>`;
+    h+=`<g class="mn${c?' cur':''}" data-id="${n.id}" role="button" tabindex="0" aria-label="View ${n.name}"><circle cx="${n.x}" cy="${n.y}" r="${c?9:6}"/><text x="${n.x}" y="${n.y-12}" text-anchor="middle">${n.name}</text></g>`;
   });
   s.innerHTML=h;
-  s.querySelectorAll('.mn').forEach(g=>g.onclick=()=>{routeIds=[];routeIdx=-1;goTo(g.dataset.id);});
+  s.querySelectorAll('.mn').forEach(g=>{
+    const navigate=()=>{routeIds=[];routeIdx=-1;goTo(g.dataset.id);};
+    g.onclick=navigate;
+    g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();navigate();}};
+  });
 }
 $('mapHead').onclick=()=>{
   const b=$('mapBox'); if(b.classList.contains('min')){b.classList.remove('min');}
   else if(!b.classList.contains('big')){b.classList.add('big');} else {b.classList.remove('big');b.classList.add('min');}
-  $('mapChev').textContent=b.classList.contains('min')?'▴':(b.classList.contains('big')?'▾':'▾');
+  $('mapHead').setAttribute('aria-expanded',String(!b.classList.contains('min')));
+  $('mapChev').textContent=b.classList.contains('min')?'▴':'▾';
 };
 
 /* ===================== PANEL: PLACES ===================== */

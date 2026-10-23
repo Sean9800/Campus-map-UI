@@ -44,15 +44,15 @@
   </div>
 
   <div id="mapBox" class="glass">
-    <button id="mapHead"><span>Campus map</span><span id="mapChev">▾</span></button>
-    <div id="mapBody"><svg id="map" viewBox="0 0 400 300"></svg></div>
+    <button id="mapHead" aria-expanded="true" aria-controls="mapBody"><span>Campus map</span><span id="mapChev" aria-hidden="true">▾</span></button>
+    <div id="mapBody"><svg id="map" viewBox="0 0 400 300" role="group" aria-label="Interactive campus map"></svg></div>
   </div>
 
   <div id="toast"></div>
 
   <div id="welcome" class="modal"><div class="card glass">
     <h2>Welcome to Eduvos Campus</h2>
-    <p>Explore the campus in 360° from wherever you are.</p>
+    <p>This demo uses sample locations and generated 360° scenes. Replace them with verified campus data and photos before publishing.</p>
     <ul><li>Drag to look around, scroll or pinch to zoom.</li><li>Tap the glowing arrows to walk to the next spot.</li><li>Use <b>Directions</b> for a guided walk between two places.</li></ul>
     <button class="pbtn go" id="startBtn">Start exploring</button>
   </div></div>

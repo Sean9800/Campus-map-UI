@@ -81,9 +81,12 @@ svg#map{width:100%;display:block;}
 .mp{stroke:#b9a77c;stroke-width:2;stroke-dasharray:4 4;} .mp.route{stroke:var(--ochre-d);stroke-width:4;stroke-dasharray:none;}
 .mn circle{fill:#1E4C52;stroke:#EFE8D8;stroke-width:2;cursor:pointer;} .mn:hover circle{fill:var(--ochre);} .mn.cur circle{fill:var(--ochre);}
 .mn text{font:600 8px Inter,sans-serif;fill:#152A33;pointer-events:none;}
+.mn:focus-visible{outline:none;}
+.mn:focus-visible circle{stroke:var(--ochre);stroke-width:4;}
 .pulse{fill:none;stroke:var(--ochre);stroke-width:2;animation:pl 1.6s infinite;} @keyframes pl{from{r:9;opacity:.9}to{r:19;opacity:0}}
 /* hotspots */
-.hs{position:absolute;transform:translate(-50%,-50%);z-index:10;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));}
+.hs{position:absolute;transform:translate(-50%,-50%);z-index:10;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));border:0;padding:0;background:none;color:inherit;font:inherit;}
+.hs:focus-visible{outline:3px solid #fff;outline-offset:4px;}
 .hs .a{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--ochre),var(--ochre-d));border:2px solid #fff;display:grid;place-items:center;color:#fff;font-size:20px;transition:transform .15s;}
 .hs:hover .a{transform:scale(1.12);} .hs.next .a{background:var(--teal);animation:bp 1.2s infinite;}
 @keyframes bp{50%{box-shadow:0 0 0 10px rgba(30,76,82,.35)}}
@@ -142,15 +145,15 @@ svg#map{width:100%;display:block;}
   </div>
 
   <div id="mapBox" class="glass">
-    <button id="mapHead"><span>Campus map</span><span id="mapChev">▾</span></button>
-    <div id="mapBody"><svg id="map" viewBox="0 0 400 300"></svg></div>
+    <button id="mapHead" aria-expanded="true" aria-controls="mapBody"><span>Campus map</span><span id="mapChev" aria-hidden="true">▾</span></button>
+    <div id="mapBody"><svg id="map" viewBox="0 0 400 300" role="group" aria-label="Interactive campus map"></svg></div>
   </div>
 
   <div id="toast"></div>
 
   <div id="welcome" class="modal"><div class="card glass">
     <h2>Welcome to Eduvos Campus</h2>
-    <p>Explore the campus in 360° from wherever you are.</p>
+    <p>This demo uses sample locations and generated 360° scenes. Replace them with verified campus data and photos before publishing.</p>
     <ul><li>Drag to look around, scroll or pinch to zoom.</li><li>Tap the glowing arrows to walk to the next spot.</li><li>Use <b>Directions</b> for a guided walk between two places.</li></ul>
     <button class="pbtn go" id="startBtn">Start exploring</button>
   </div></div>
@@ -180,7 +183,7 @@ const nodes = [
   {id:"lab", name:"Computer Lab", cat:"Academic", icon:"💻", desc:"Open-access PCs, software and tech support.", x:90, y:40, links:["library"]},
   {id:"parking", name:"Parking & Sports Field", cat:"Facilities", icon:"⚽", desc:"Student parking and the sports field.", x:330, y:210, links:["hallB"]}
 ];
-const byID = Object.fromEntries(nodes.map(n=>[n.id,n]));
+const byId = Object.fromEntries(nodes.map(n=>[n.id,n]));
 const $ = id => document.getElementById(id);
 let cur = "entrance", prev = null, routeIds = [], routeIdx = -1, catFilter = "All";
 
@@ -226,8 +229,14 @@ function placeholder(n){
 }
 const loader=new THREE.TextureLoader();
 function getTex(n){
-  if(texCache[n.id])return Promise.resolve(texCache[n.id]);
-  return new Promise(res=>loader.load(n.pano||placeholder(n),t=>{t.encoding=THREE.sRGBEncoding;texCache[n.id]=t;res(t);}));
+  if(texCache[n.id])return texCache[n.id];
+  texCache[n.id]=new Promise((resolve,reject)=>loader.load(
+    n.pano||placeholder(n),
+    t=>{t.encoding=THREE.sRGBEncoding;resolve(t);},
+    undefined,
+    ()=>{delete texCache[n.id];reject(new Error(`Unable to load panorama for ${n.name}.`));}
+  ));
+  return texCache[n.id];
 }
 const bearing=(a,b)=>(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
 const lonFor=(a,b)=>(450-bearing(a,b)+(a.yaw||0)+360)%360;
@@ -263,8 +272,9 @@ function buildHotspots(){
   const nextId=routeIdx>=0?routeIds[routeIdx+1]:null;
   byId[cur].links.forEach(id=>{
     const t=byId[id]; if(!t)return;
-    const el=document.createElement('div'); el.className='hs'+(id===nextId?' next':'');
-    el.innerHTML=`<div class="a">➜</div><div class="t">${t.name}</div>`;
+    const el=document.createElement('button'); el.type='button'; el.className='hs'+(id===nextId?' next':'');
+    el.setAttribute('aria-label',`Move to ${t.name}`);
+    el.innerHTML=`<span class="a" aria-hidden="true">➜</span><span class="t">${t.name}</span>`;
     el.onclick=()=>{ if(id===nextId)routeIdx++; else if(routeIdx>=0&&routeIds[routeIdx-1]===id)routeIdx--; goTo(id); };
     $('hotspots').appendChild(el); hs.push({el,l:lonFor(byId[cur],t)});
   });
@@ -282,14 +292,20 @@ function placeHotspots(){
 async function goTo(id,faceTo){
   const n=byId[id]; if(!n)return;
   $('fade').classList.add('on'); await new Promise(r=>setTimeout(r,240));
-  const t=await getTex(n); sphere.material.map=t; sphere.material.color.set(0xffffff); sphere.material.needsUpdate=true;
-  const from=byId[cur]; prev=(id!==cur)?from:prev; cur=id;
-  const nextId=faceTo||(routeIdx>=0?routeIds[routeIdx+1]:null);
-  if(nextId&&byId[nextId])tLon=lon=lonFor(n,byId[nextId]);
-  else if(prev&&prev!==n)tLon=lon=(lonFor(prev,n)+0)%360;
-  tLat=lat=0; vel=0;
-  buildHotspots(); drawMap(); updateInfo(); markPlace(); markStep();
-  $('fade').classList.remove('on');
+  try{
+    const t=await getTex(n); sphere.material.map=t; sphere.material.color.set(0xffffff); sphere.material.needsUpdate=true;
+    const from=byId[cur]; prev=(id!==cur)?from:prev; cur=id;
+    const nextId=faceTo||(routeIdx>=0?routeIds[routeIdx+1]:null);
+    if(nextId&&byId[nextId])tLon=lon=lonFor(n,byId[nextId]);
+    else if(prev&&prev!==n)tLon=lon=(lonFor(prev,n)+0)%360;
+    tLat=lat=0; vel=0;
+    buildHotspots(); drawMap(); updateInfo(); markPlace(); markStep();
+  }catch(error){
+    console.error(error);
+    toast(`Unable to load the panorama for ${n.name}. Check the image URL and try again.`);
+  }finally{
+    $('fade').classList.remove('on');
+  }
 }
 function updateInfo(){ const n=byId[cur]; $('iName').textContent=n.name; $('iDesc').textContent=n.desc||''; }
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('on'),2600); }
@@ -307,15 +323,20 @@ function drawMap(){
   nodes.forEach(n=>{
     const c=n.id===cur;
     if(c)h+=`<circle class="pulse" cx="${n.x}" cy="${n.y}" r="9"/>`;
-    h+=`<g class="mn${c?' cur':''}" data-id="${n.id}"><circle cx="${n.x}" cy="${n.y}" r="${c?9:6}"/><text x="${n.x}" y="${n.y-12}" text-anchor="middle">${n.name}</text></g>`;
+    h+=`<g class="mn${c?' cur':''}" data-id="${n.id}" role="button" tabindex="0" aria-label="View ${n.name}"><circle cx="${n.x}" cy="${n.y}" r="${c?9:6}"/><text x="${n.x}" y="${n.y-12}" text-anchor="middle">${n.name}</text></g>`;
   });
   s.innerHTML=h;
-  s.querySelectorAll('.mn').forEach(g=>g.onclick=()=>{routeIds=[];routeIdx=-1;goTo(g.dataset.id);});
+  s.querySelectorAll('.mn').forEach(g=>{
+    const navigate=()=>{routeIds=[];routeIdx=-1;goTo(g.dataset.id);};
+    g.onclick=navigate;
+    g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();navigate();}};
+  });
 }
 $('mapHead').onclick=()=>{
   const b=$('mapBox'); if(b.classList.contains('min')){b.classList.remove('min');}
   else if(!b.classList.contains('big')){b.classList.add('big');} else {b.classList.remove('big');b.classList.add('min');}
-  $('mapChev').textContent=b.classList.contains('min')?'▴':(b.classList.contains('big')?'▾':'▾');
+  $('mapHead').setAttribute('aria-expanded',String(!b.classList.contains('min')));
+  $('mapChev').textContent=b.classList.contains('min')?'▴':'▾';
 };
 
 /* ===================== PANEL: PLACES ===================== */
