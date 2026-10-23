@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eduvos Campus Explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <div id="viewer"></div><div id="fade"></div><div id="hotspots"></div>
 
+  <div id="top">
+    <button class="ibtn glass" id="menuBtn" aria-label="Places and directions">☰</button>
+    <div class="brand glass"><i></i><span>Eduvos Campus Explorer</span></div>
+    <div class="sp"></div>
+    <button class="ibtn glass" id="autoBtn" title="Auto-rotate">⟳</button>
+    <button class="ibtn glass" id="fsBtn" title="Full screen">⛶</button>
+    <button class="ibtn glass" id="helpBtn" title="Help">?</button>
+  </div>
+
+  <aside id="panel" class="glass">
+    <div class="tabs"><button class="tab on" data-t="places">Places</button><button class="tab" data-t="dir">Directions</button></div>
+    <section class="pane on" id="p-places">
+      <input type="search" id="q" placeholder="Search buildings, food, facilities…">
+      <div class="chips" id="chips"></div>
+      <div id="list"></div>
+    </section>
+    <section class="pane" id="p-dir">
+      <div><div class="lbl">From</div><select id="from"></select></div>
+      <div><div class="lbl">To</div><select id="to"></select></div>
+      <div class="row"><button class="pbtn alt" id="swap">⇅ Swap</button><button class="pbtn" id="findBtn" style="flex:1">Find route</button></div>
+      <div id="routeOut"><div class="empty">Choose a start and destination, then tap “Find route”.</div></div>
+    </section>
+  </aside>
+
+  <div id="zoom"><button class="ibtn glass" id="zi">+</button><button class="ibtn glass" id="zo">–</button></div>
+
+  <div id="info" class="glass">
+    <div id="compass"><span>N</span><div id="needle"></div></div>
+    <div><h2 id="iName">–</h2><p id="iDesc"></p></div>
+  </div>
+
+  <div id="mapBox" class="glass">
+    <button id="mapHead"><span>Campus map</span><span id="mapChev">▾</span></button>
+    <div id="mapBody"><svg id="map" viewBox="0 0 400 300"></svg></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="welcome" class="modal"><div class="card glass">
+    <h2>Welcome to Eduvos Campus</h2>
+    <p>Explore the campus in 360° from wherever you are.</p>
+    <ul><li>Drag to look around, scroll or pinch to zoom.</li><li>Tap the glowing arrows to walk to the next spot.</li><li>Use <b>Directions</b> for a guided walk between two places.</li></ul>
+    <button class="pbtn go" id="startBtn">Start exploring</button>
+  </div></div>
+
+  <div id="help" class="modal hide"><div class="card glass">
+    <h2>Controls</h2>
+    <ul><li><b>Look:</b> drag, or use the arrow keys</li><li><b>Zoom:</b> scroll wheel, pinch, + / – keys</li><li><b>Walk:</b> tap an arrow, or a dot on the map</li><li><b>Directions:</b> open ☰ then the Directions tab</li></ul>
+    <button class="pbtn" id="helpClose">Got it</button>
+  </div></div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
